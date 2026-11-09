@@ -13,6 +13,9 @@ __generated_with = "0.25.2"
 app = marimo.App(width="full", app_title="Stations dashboard")
 
 with app.setup:
+    import io
+    import urllib.request
+
     import altair as alt
     import folium
     import marimo as mo
@@ -48,7 +51,14 @@ def load_stations(path: str) -> pd.DataFrame:
     Raises:
         ValueError: If required columns are missing or the table is empty.
     """
-    stations = pd.read_csv(path)
+    # Read URLs as raw bytes: GitHub Pages sends Content-Encoding: gzip, the
+    # browser already decompresses, and pandas would try to gunzip again.
+    if path.startswith(("http://", "https://")):
+        with urllib.request.urlopen(path) as response:
+            source = io.BytesIO(response.read())
+    else:
+        source = path
+    stations = pd.read_csv(source)
     missing = set(REQUIRED_COLUMNS) - set(stations.columns)
     if missing:
         raise ValueError(f"Missing columns in {path}: {sorted(missing)}")
